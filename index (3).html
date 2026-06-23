@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다산북스 총무팀 비용관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --navy:#0f2044;--navy2:#1a3260;--blue:#2563eb;--blue-light:#3b82f6;--blue-pale:#eff6ff;
+  --red:#dc2626;--red-bg:#fef2f2;--orange:#ea580c;--orange-bg:#fff7ed;
+  --green:#16a34a;--green-bg:#f0fdf4;--purple:#7c3aed;--purple-bg:#f5f3ff;
+  --gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;--gray300:#cbd5e1;
+  --gray400:#94a3b8;--gray600:#475569;--gray700:#334155;--gray900:#0f172a;
+  --white:#fff;--mono:'JetBrains Mono',monospace;
+  --shadow:0 1px 4px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--gray100);color:var(--gray900);min-height:100vh;}
+
+/* 헤더 */
+.hdr{background:var(--navy);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.hdr-logo{font-family:'Pacifico',cursive;color:#fff;font-size:17px;letter-spacing:-.3px;}
+.hdr-logo span{color:#60a5fa;}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.hdr-date{font-size:11px;color:var(--gray400);font-family:var(--mono);}
+.hdr-badge{background:rgba(255,255,255,.1);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;}
+
+/* 탭 */
+.tabs{background:var(--navy2);display:flex;padding:0 20px;gap:2px;overflow-x:auto;}
+.tab{padding:12px 18px;color:var(--gray300);font-size:13px;font-weight:500;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .18s;}
+.tab:hover{color:#fff;}
+.tab.on{color:#fff;border-bottom-color:#60a5fa;}
+
+/* 본문 */
+.main{max-width:1440px;margin:0 auto;padding:20px 16px;}
+.sec{display:none;}.sec.on{display:block;}
+
+/* 카드 */
+.card{background:var(--white);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:18px;}
+.card-hd{padding:14px 18px;border-bottom:1px solid var(--gray100);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-title{font-size:14px;font-weight:700;color:var(--navy);}
+.card-sub{font-size:11px;color:var(--gray400);font-family:var(--mono);}
+.card-body{padding:16px 18px;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px;}
+.kpi{background:var(--white);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);border-left:4px solid var(--gray200);}
+.kpi.blue{border-left-color:var(--blue);}
+.kpi.red{border-left-color:var(--red);}
+.kpi.orange{border-left-color:var(--orange);}
+.kpi.green{border-left-color:var(--green);}
+.kpi-label{font-size:11px;color:var(--gray400);font-weight:600;letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px;}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--navy);line-height:1.1;}
+.kpi-val.red{color:var(--red);}
+.kpi-val.orange{color:var(--orange);}
+.kpi-val.green{color:var(--green);}
+.kpi-hint{font-size:11px;color:var(--gray400);margin-top:4px;}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+thead th{background:var(--gray50);color:var(--gray600);font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;padding:9px 12px;text-align:left;border-bottom:1px solid var(--gray200);white-space:nowrap;}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--gray100);color:var(--gray700);vertical-align:middle;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--gray50);}
+tfoot td{padding:9px 12px;font-weight:700;font-family:var(--mono);font-size:12px;border-top:2px solid var(--gray200);background:var(--gray50);}
+.num{font-family:var(--mono);font-size:12px;text-align:right;white-space:nowrap;}
+
+/* 행 색상 */
+tr.r-urgent{background:var(--red-bg)!important;}
+tr.r-warn{background:var(--orange-bg)!important;}
+tr.r-ok{background:var(--green-bg)!important;}
+
+/* 뱃지 */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--mono);white-space:nowrap;}
+.badge.urgent{background:var(--red-bg);color:var(--red);}
+.badge.warn{background:var(--orange-bg);color:var(--orange);}
+.badge.ok{background:var(--green-bg);color:var(--green);}
+.badge.neutral{background:var(--gray100);color:var(--gray600);}
+.badge.blue{background:var(--blue-pale);color:var(--blue);}
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:500;}
+.tag.util{background:#ede9fe;color:#6d28d9;}
+.tag.contract{background:#dbeafe;color:#1d4ed8;}
+.tag.renewal{background:#d1fae5;color:#065f46;}
+.tag.labor{background:#fef3c7;color:#92400e;}
+
+/* 필터바 */
+.fbar{display:flex;gap:8px;padding:10px 18px;background:var(--gray50);border-bottom:1px solid var(--gray100);flex-wrap:wrap;align-items:center;}
+.fbar input,.fbar select{padding:6px 10px;border:1px solid var(--gray200);border-radius:6px;font-size:12px;font-family:'Noto Sans KR',sans-serif;background:#fff;}
+.fbar input{width:200px;}
+.ftag{padding:4px 11px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--gray200);background:#fff;color:var(--gray600);transition:all .15s;}
+.ftag.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.fbar-right{margin-left:auto;display:flex;gap:6px;}
+
+/* 그리드 2/3 */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;}
+
+/* 차트 */
+.chart-wrap{position:relative;height:220px;padding:4px 0;}
+
+/* 추이 입력 */
+.trend-month-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px;}
+.mtab{padding:4px 12px;border:1px solid var(--gray200);border-radius:20px;font-size:12px;cursor:pointer;background:#fff;color:var(--gray600);}
+.mtab.on{background:var(--navy);color:#fff;border-color:var(--navy);}
+.year-sel{padding:5px 10px;border:1px solid var(--gray200);border-radius:6px;font-size:12px;font-family:'Noto Sans KR',sans-serif;}
+.inp-amt{width:120px;padding:4px 8px;border:1px solid var(--gray200);border-radius:4px;font-family:var(--mono);font-size:12px;text-align:right;}
+.inp-amt:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.15);}
+.inp-memo{width:180px;padding:4px 8px;border:1px solid var(--gray200);border-radius:4px;font-size:12px;}
+.btn-save{padding:4px 10px;background:var(--blue);color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;}
+.btn-save:hover{background:var(--blue-light);}
+.btn-save.done{background:var(--green);}
+
+/* 증감 아이콘 */
+.up{color:var(--red);font-weight:700;}
+.dn{color:var(--green);font-weight:700;}
+.neu{color:var(--gray400);}
+
+/* 분석 카드 */
+.alert-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-radius:8px;margin-bottom:8px;}
+.alert-item.urgent{background:var(--red-bg);border-left:3px solid var(--red);}
+.alert-item.warn{background:var(--orange-bg);border-left:3px solid var(--orange);}
+.alert-item.ok{background:var(--green-bg);border-left:3px solid var(--green);}
+.alert-icon{font-size:18px;line-height:1;}
+.alert-body{flex:1;}
+.alert-title{font-weight:600;font-size:13px;margin-bottom:2px;}
+.alert-desc{font-size:12px;color:var(--gray600);}
+.alert-amt{font-family:var(--mono);font-size:12px;font-weight:600;margin-left:auto;white-space:nowrap;}
+
+/* 운영비 카테고리 카드 */
+.util-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.util-card{background:var(--gray50);border-radius:10px;padding:16px;border:1px solid var(--gray200);}
+.util-card-icon{font-size:24px;margin-bottom:8px;}
+.util-card-name{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.util-card-amt{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--gray900);margin-bottom:2px;}
+.util-card-cnt{font-size:11px;color:var(--gray400);}
+.util-bar{height:3px;background:var(--gray200);border-radius:2px;margin-top:8px;}
+.util-bar-fill{height:3px;border-radius:2px;background:var(--blue);}
+
+/* 토스트 */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+.toast.on{opacity:1;transform:translateY(0);}
+
+/* 로딩 */
+.spin{width:14px;height:14px;border:2px solid var(--gray200);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* 반응형 */
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
+@media(max-width:600px){.main{padding:12px 10px;}.kpi-row{grid-template-columns:1fr 1fr;}.kpi-val{font-size:16px;}.hdr-logo{font-size:14px;}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-logo">Dasan<span>Books</span> · 총무팀 비용관리</div>
+  <div class="hdr-right">
+    <span class="hdr-date" id="todayTxt"></span>
+    <span class="hdr-badge" id="fireStatus">⏳ 연결중...</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab on"  onclick="go('dash',this)">📊 대시보드</div>
+  <div class="tab"     onclick="go('contract',this)">📋 계약 현황</div>
+  <div class="tab"     onclick="go('util',this)">💡 운영비 현황</div>
+  <div class="tab"     onclick="go('trend',this)">📈 추이 분석</div>
+  <div class="tab"     onclick="go('factor',this)">🔍 증감 요인</div>
+</div>
+
+<div class="main">
+
+<!-- ① 대시보드 -->
+<div class="sec on" id="sec-dash">
+  <div class="kpi-row" id="kpiRow"></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-hd"><span class="card-title">🔴 갱신 임박 항목</span><span class="card-sub" id="urgentCnt"></span></div>
+      <div class="tbl-wrap"><table id="urgentTbl">
+        <thead><tr><th>내용</th><th>거래처</th><th>갱신예정일</th><th>D-Day</th><th>금액</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><span class="card-title">📂 계정별 월 고정비</span></div>
+      <div class="card-body" id="accSummary"></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-hd"><span class="card-title">연1회 갱신비 월별 분포</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="renewalChart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><span class="card-title">운영비 카테고리별 비중</span></div>
+      <div class="card-body"><div class="chart-wrap"><canvas id="utilChart"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ② 계약 현황 -->
+<div class="sec" id="sec-contract">
+  <div class="fbar">
+    <input type="text" placeholder="거래처 / 내용 검색..." id="cSearch" oninput="renderContract()">
+    <select id="cAccFilter" onchange="renderContract()"><option value="">전체 계정</option></select>
+    <div class="ftag on" onclick="cFilter('all',this)">전체</div>
+    <div class="ftag" onclick="cFilter('urgent',this)">🔴 30일 이내</div>
+    <div class="ftag" onclick="cFilter('warn',this)">🟠 60일 이내</div>
+    <div class="ftag" onclick="cFilter('ok',this)">🟢 여유</div>
+    <div class="ftag" onclick="cFilter('annual',this)">연1회 갱신</div>
+    <div class="fbar-right">
+      <span class="card-sub" id="contractCntTxt"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tbl-wrap"><table id="contractTbl">
+      <thead><tr>
+        <th>구분</th><th>거래처</th><th>계정</th><th>내용</th><th>계약조건</th>
+        <th>기준금액/월</th><th>갱신예정일</th><th>D-Day</th><th>비고</th>
+      </tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="5">합 계</td><td class="num" id="contractTotal"></td><td colspan="3"></td></tr></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<!-- ③ 운영비 현황 -->
+<div class="sec" id="sec-util">
+  <div class="util-grid" id="utilCardGrid" style="margin-bottom:18px;"></div>
+  <div class="fbar">
+    <div class="ftag on" onclick="uFilter('all',this)">전체</div>
+    <div class="ftag" onclick="uFilter('전기',this)">⚡ 전기</div>
+    <div class="ftag" onclick="uFilter('수도',this)">💧 수도</div>
+    <div class="ftag" onclick="uFilter('통신',this)">📡 통신</div>
+    <div class="ftag" onclick="uFilter('보안',this)">🔒 보안</div>
+    <div class="ftag" onclick="uFilter('렌탈',this)">🚗 렌탈·리스</div>
+    <div class="ftag" onclick="uFilter('유지보수',this)">🔧 유지보수</div>
+    <div class="ftag" onclick="uFilter('복리후생',this)">☕ 복리후생</div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><span class="card-title" id="utilTblTitle">운영비 항목 전체</span><span class="card-sub" id="utilCnt"></span></div>
+    <div class="tbl-wrap"><table id="utilTbl">
+      <thead><tr><th>카테고리</th><th>거래처</th><th>내용</th><th>지급일</th><th>기준금액/월</th><th>자동이체여부</th><th>비고</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="4">합 계</td><td class="num" id="utilTotal"></td><td colspan="2"></td></tr></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<!-- ④ 추이 분석 -->
+<div class="sec" id="sec-trend">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <select class="year-sel" id="trendYear" onchange="renderTrend()">
+      <option value="2024">2024년</option>
+      <option value="2025">2025년</option>
+      <option value="2026" selected>2026년</option>
+    </select>
+    <span style="font-size:12px;color:var(--gray400);">월별 실제 지출을 입력하면 추이 차트가 자동으로 업데이트됩니다.</span>
+  </div>
+  <div class="card">
+    <div class="card-hd"><span class="card-title">월별 지출 추이</span><span class="card-sub" id="trendSub"></span></div>
+    <div class="card-body"><div class="chart-wrap" style="height:260px;"><canvas id="trendChart"></canvas></div></div>
+  </div>
+  <div class="trend-month-tabs" id="trendMonthTabs"></div>
+  <div class="card">
+    <div class="card-hd">
+      <span class="card-title" id="trendInputTitle">월별 항목별 실제금액 입력</span>
+      <span class="card-sub">노란 칸에 실제 지출액을 입력하고 저장하세요</span>
+    </div>
+    <div class="tbl-wrap"><table id="trendInputTbl">
+      <thead><tr><th>거래처</th><th>내용</th><th>기준금액</th><th style="background:#fffbea;">실제금액 입력</th><th style="background:#fffbea;">증감 요인 메모</th><th></th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr>
+        <td colspan="2">합계</td>
+        <td class="num" id="trendBaseTotal"></td>
+        <td class="num" id="trendActualTotal" style="background:#fffbea;"></td>
+        <td colspan="2"></td>
+      </tr></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<!-- ⑤ 증감 요인 -->
+<div class="sec" id="sec-factor">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+    <select class="year-sel" id="factorYear" onchange="renderFactor()">
+      <option value="2024">2024년</option>
+      <option value="2025">2025년</option>
+      <option value="2026" selected>2026년</option>
+    </select>
+    <select class="year-sel" id="factorMonth" onchange="renderFactor()"></select>
+    <span style="font-size:12px;color:var(--gray400);">전월 대비 증감이 큰 항목을 자동으로 탐지합니다.</span>
+  </div>
+  <div class="kpi-row" id="factorKpi" style="grid-template-columns:repeat(4,1fr);"></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-hd"><span class="card-title">🔺 전월 대비 증가 항목</span></div>
+      <div class="card-body" id="factorUp"></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><span class="card-title">🔻 전월 대비 감소 항목</span></div>
+      <div class="card-body" id="factorDn"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><span class="card-title">전체 항목 전월비 상세</span></div>
+    <div class="tbl-wrap"><table id="factorTbl">
+      <thead><tr><th>거래처</th><th>내용</th><th>전월</th><th>당월</th><th>증감액</th><th>증감률</th><th>요인 메모</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ★ Firebase 설정 - 배포 시 여기를 교체하세요 ★
+const firebaseConfig = {
+  apiKey: "AIzaSyBw4HHQIxQNJBuBAAND8A1yjNLz5yiWFcU",
+  authDomain: "dasan-expense.firebaseapp.com",
+  projectId: "dasan-expense",
+  storageBucket: "dasan-expense.firebasestorage.app",
+  messagingSenderId: "458023968300",
+  appId: "1:458023968300:web:8b11d27d77cb48d0be3b89"
+};
+
+let db, fireOk = false;
+try {
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  fireOk = true;
+  document.getElementById('fireStatus').textContent = '🔥 Firebase 연결됨';
+} catch(e) {
+  document.getElementById('fireStatus').textContent = '⚠️ 오프라인 모드';
+}
+
+// =========================================================
+// 실데이터
+// =========================================================
+
+// 계약 현황 (정기계약 + 연갱신) 통합
+// type: 'monthly'=매월 정기, 'annual'=연1회, 'util'=운영비(전기·수도·통신 등)
+// category: 운영비 분류용
+const CONTRACTS = [
+  // ── 정기계약 (매월) ──────────────────────────────────────
+  {id:'c001',type:'monthly',category:'법률',payDate:'매월 10일',vendor:'법무법인 남강',account:'지급수수료',content:'법률 자문계약(다산북스,스튜디오다산)',condition:'월 550,000원, 2019.05~',base:550000,renewDate:null,memo:''},
+  {id:'c002',type:'monthly',category:'복리후생',payDate:'매월 10일',vendor:'우주투어',account:'복리후생비',content:'출퇴근 버스',condition:'월 6,259,000원',base:6259000,renewDate:null,memo:''},
+  {id:'c003',type:'monthly',category:'렌탈',payDate:'매월 10일',vendor:'롯데렌탈',account:'차량렌트리스',content:'법인차량 렌탈료(33대)',condition:'차량별 계약기간 상이, 매월 변동',base:15275510,renewDate:null,memo:'계약기간에 따라 렌탈료 변동됨'},
+  {id:'c004',type:'monthly',category:'유지보수',payDate:'매월 10일',vendor:'정직한 오피스',account:'지급수수료',content:'PC등 전자기기 유지보수',condition:'월 약 2,000,000원, 실비정산',base:2000000,renewDate:null,memo:'실비정산'},
+  {id:'c005',type:'monthly',category:'유지보수',payDate:'매월 10일',vendor:'정직한 오피스',account:'소모품비',content:'매월 유지보수',condition:'월 385,000원, 2023.02.15~',base:385000,renewDate:null,memo:''},
+  {id:'c006',type:'monthly',category:'복리후생',payDate:'매월 10일',vendor:'고든',account:'복리후생비',content:'커피',condition:'월 약 1,000,000원, 실비정산',base:1000000,renewDate:null,memo:'실비정산'},
+  {id:'c007',type:'monthly',category:'렌탈',payDate:'매월 10일',vendor:'코웨이',account:'지급수수료',content:'물류관리팀 정수기 2대 렌탈료',condition:'월 122,650원',base:122650,renewDate:null,memo:'031-976-0352~3'},
+  {id:'c008',type:'monthly',category:'유지보수',payDate:'매월 10일',vendor:'위카피(캐논복합기)',account:'지급수수료',content:'본사 복합기 7대',condition:'월 1,155,000원, 매월 변동',base:1155000,renewDate:null,memo:'매월 변동'},
+  {id:'c009',type:'monthly',category:'유지보수',payDate:'매월 10일',vendor:'위카피(캐논복합기)',account:'소모품비',content:'본사 용지 비용',condition:'월 약 346,500원, 매월 변동',base:346500,renewDate:null,memo:'매월 변동'},
+  {id:'c010',type:'monthly',category:'보험',payDate:'매월 13일',vendor:'삼성화재',account:'보험료',content:'본사 사옥 화재보험 비례보상',condition:'월 250,000원',base:250000,renewDate:null,memo:'지출결의 일괄 입력'},
+  {id:'c011',type:'monthly',category:'보험',payDate:'매월 13일',vendor:'삼성화재',account:'보험료',content:'본사 사옥 화재보험 실손보상',condition:'월 50,000원',base:50000,renewDate:null,memo:''},
+  {id:'c012',type:'monthly',category:'보험',payDate:'매월 15일',vendor:'삼성화재',account:'보험료',content:'운전자보험',condition:'월 330,000원',base:330000,renewDate:null,memo:''},
+  {id:'c013',type:'monthly',category:'보험',payDate:'매월 15일',vendor:'삼성생명',account:'보험료',content:'상해보험',condition:'월 783,800원',base:783800,renewDate:null,memo:''},
+  {id:'c014',type:'monthly',category:'기타',payDate:'매월 20일',vendor:'마하퀵',account:'운반비',content:'퀵 발송비용',condition:'월 약 500,000원, 실비정산',base:500000,renewDate:null,memo:'실비정산'},
+  {id:'c015',type:'monthly',category:'유지보수',payDate:'매월 20일',vendor:'빅씽크',account:'지급수수료',content:'아이피스 유지보수',condition:'월 330,000원, 2014.10~',base:330000,renewDate:null,memo:''},
+  {id:'c016',type:'monthly',category:'법률',payDate:'매월 20일',vendor:'법무법인 신율',account:'지급수수료',content:'법률자문',condition:'월 330,000원, 2021.10.08~',base:330000,renewDate:null,memo:''},
+  {id:'c017',type:'monthly',category:'복리후생',payDate:'매월 20일',vendor:'오피스넥스(일산점)',account:'복리후생비',content:'과일 & 근조화환',condition:'월 약 500,000원, 실비정산',base:500000,renewDate:null,memo:'세금계산서 매월 말일 발급, 익월 20일 지급'},
+  {id:'c018',type:'monthly',category:'기타',payDate:'매월 20일',vendor:'오피스넥스(일산점)',account:'소모품비',content:'사무비품',condition:'월 약 1,000,000원, 실비정산',base:1000000,renewDate:null,memo:'실비정산'},
+  {id:'c019',type:'monthly',category:'보안',payDate:'매월 21일',vendor:'㈜에스원 파주',account:'지급수수료',content:'보안서비스(본사)',condition:'월 418,000원',base:418000,renewDate:null,memo:''},
+  {id:'c020',type:'monthly',category:'보안',payDate:'매월 21일',vendor:'㈜에스원 파주',account:'지급수수료',content:'보안서비스(제1물류센터)',condition:'월 165,000원',base:165000,renewDate:null,memo:''},
+  {id:'c021',type:'monthly',category:'보안',payDate:'매월 21일',vendor:'㈜에스원 파주',account:'지급수수료',content:'보안서비스(제2물류센터)',condition:'월 220,000원',base:220000,renewDate:null,memo:''},
+  {id:'c022',type:'monthly',category:'통신',payDate:'매월 21일',vendor:'SK텔레콤',account:'건물관리비_통신비',content:'본사 EV 비상전화(주출입구)',condition:'월 3,500원',base:3500,renewDate:null,memo:''},
+  {id:'c023',type:'monthly',category:'통신',payDate:'매월 21일',vendor:'SK텔레콤',account:'건물관리비_통신비',content:'본사 EV 비상전화(부출입구)',condition:'월 3,500원',base:3500,renewDate:null,memo:''},
+  {id:'c024',type:'monthly',category:'통신',payDate:'매월 22일',vendor:'LG유플러스 웹하드',account:'통신비',content:'LG유플러스 웹하드',condition:'월 163,350원',base:163350,renewDate:null,memo:''},
+  {id:'c025',type:'monthly',category:'유지보수',payDate:'매월 25일',vendor:'대성이앤이',account:'지급수수료',content:'전기설비 안전관리',condition:'월 165,000원, 2023.02.01~(자동연장)',base:165000,renewDate:null,memo:''},
+  {id:'c026',type:'monthly',category:'유지보수',payDate:'매월 25일',vendor:'마인정보기술',account:'지급수수료',content:'다산콘텐츠ERP 유지보수료',condition:'월 1,870,000원',base:1870000,renewDate:null,memo:''},
+  {id:'c027',type:'monthly',category:'유지보수',payDate:'매월 25일',vendor:'동방엘리베이터',account:'지급수수료',content:'승강기 점검',condition:'월 220,000원, 2021.03.01~(자동연장)',base:220000,renewDate:null,memo:''},
+  {id:'c028',type:'monthly',category:'기타',payDate:'매월 25일',vendor:'대한출판문화협회',account:'지급수수료',content:'월회비',condition:'월 120,000원',base:120000,renewDate:null,memo:'회비청구서 메일'},
+  {id:'c029',type:'monthly',category:'기타',payDate:'매월 25일',vendor:'한국출판인회의',account:'지급수수료',content:'월회비',condition:'월 100,000원',base:100000,renewDate:null,memo:'매년 12월 특별기부금 1천만원 별도'},
+  {id:'c030',type:'monthly',category:'유지보수',payDate:'매월 25일',vendor:'하나로호스팅',account:'',content:'마인 서버 웹방어벽 및 백업',condition:'월 187,000원',base:187000,renewDate:null,memo:''},
+  {id:'c031',type:'monthly',category:'유지보수',payDate:'매월 25일',vendor:'하나로호스팅',account:'',content:'마인서버호스팅료',condition:'월 262,000원',base:262000,renewDate:null,memo:''},
+  {id:'c032',type:'monthly',category:'통신',payDate:'매월 25일',vendor:'케이티',account:'건물관리비_통신비',content:'UTM 장비 이용료',condition:'월 348,510원',base:348510,renewDate:null,memo:''},
+  {id:'c033',type:'monthly',category:'통신',payDate:'매월 25일',vendor:'케이티',account:'건물관리비_통신비',content:'본사 인터넷전화 이용료',condition:'월 약 482,480원, 매달 상이',base:482480,renewDate:null,memo:'매달 조금씩 상이'},
+  {id:'c034',type:'monthly',category:'통신',payDate:'매월 25일',vendor:'케이티',account:'건물관리비_통신비',content:'본사 인터넷 이용료',condition:'월 약 311,760원, 매달 상이',base:311760,renewDate:null,memo:'매달 조금씩 상이'},
+  {id:'c035',type:'monthly',category:'법률',payDate:'매월 10일',vendor:'홍익노무법인',account:'지급수수료',content:'노무자문',condition:'월 275,000원, 26.01~(기존 노무법인에이스)',base:275000,renewDate:null,memo:'26.01부터 업체 변경'},
+  {id:'c036',type:'monthly',category:'렌탈',payDate:'매월 25일',vendor:'청호나이스',account:'복리후생비',content:'본사 정수기 7대 렌탈료',condition:'금액 미확인',base:0,renewDate:null,memo:'금액 미입력 - 확인 필요'},
+  {id:'c037',type:'monthly',category:'유지보수',payDate:'매월 말일',vendor:'하나방재',account:'지급수수료',content:'소방안전관리(본사)',condition:'월 132,000원, 2021.03.01~(자동연장)',base:132000,renewDate:null,memo:''},
+  {id:'c038',type:'monthly',category:'유지보수',payDate:'매월 말일',vendor:'하나방재',account:'지급수수료',content:'소방안전관리(물류)',condition:'월 100,000원, 2021.05.01~(자동연장)',base:100000,renewDate:null,memo:''},
+  {id:'c039',type:'monthly',category:'기타',payDate:'매월 말일',vendor:'신문대금(장종진)',account:'도서구입비',content:'본사 신문 구독료',condition:'월 480,000원',base:480000,renewDate:null,memo:'고지서는 브랜드관리팀 서가을 매니저'},
+  {id:'c040',type:'monthly',category:'유지보수',payDate:'매월 말일',vendor:'창리정보통신',account:'지급수수료',content:'넷하드 유지보수료',condition:'월 165,000원',base:165000,renewDate:null,memo:''},
+  {id:'c041',type:'monthly',category:'기타',payDate:'매월 말일',vendor:'티피에스에듀케이션',account:'지급임차료',content:'월롱창고 월임대료+전기료',condition:'월 1,100,000 + 전기 실비',base:1103000,renewDate:null,memo:'세금계산서 발급 늦으니 요청 필요'},
+  {id:'c042',type:'monthly',category:'복리후생',payDate:'매월 말일',vendor:'씨엔로지스',account:'복리후생비',content:'여유당 식음료',condition:'월 약 2,000,000원, 실비정산',base:2000000,renewDate:null,memo:'실비정산 / 마지막주 발주 후 세금계산서 요청'},
+  {id:'c043',type:'monthly',category:'복리후생',payDate:'2개월마다',vendor:'파주출판단지입주기업협의회',account:'복리후생비',content:'통근버스 고양노선',condition:'짝수월(2,4,6,8,10,12월) 385,000원',base:385000,renewDate:null,memo:'짝수월 지급 / 어린이집과 계좌번호 다름'},
+  // ── 운영비 (전기·수도·통신 등) ─────────────────────────
+  {id:'u001',type:'util',category:'전기',payDate:'매월 25일',vendor:'한국전력공사',account:'건물관리비_전기요금',content:'제1물류 전기요금(세금계산서)',condition:'약 550,000원, 실비정산',base:550000,renewDate:null,memo:'실비정산'},
+  {id:'u002',type:'util',category:'전기',payDate:'매월 25일',vendor:'한국전력공사',account:'건물관리비_전기요금',content:'제2물류 전기요금(세금계산서)',condition:'약 550,000원, 실비정산',base:550000,renewDate:null,memo:'실비정산'},
+  {id:'u003',type:'util',category:'전기',payDate:'매월 말일',vendor:'한국전력공사',account:'건물관리비_전기요금',content:'본사 전기요금(세금계산서)',condition:'약 5,000,000원, 실비정산',base:5000000,renewDate:null,memo:'실비정산'},
+  {id:'u004',type:'util',category:'수도',payDate:'매월 말일',vendor:'한국수자원공사(파주)',account:'건물관리비_수도요금',content:'상하수도(본사)',condition:'약 700,000원, 실비정산',base:700000,renewDate:null,memo:'실비정산'},
+  {id:'u005',type:'util',category:'수도',payDate:'매월 말일',vendor:'한국수자원공사(파주)',account:'건물관리비_수도요금',content:'상하수도(제1물류센터)',condition:'약 50,000원, 실비정산',base:50000,renewDate:null,memo:'실비정산'},
+  {id:'u006',type:'util',category:'수도',payDate:'매월 말일',vendor:'한국수자원공사(파주)',account:'건물관리비_수도요금',content:'상하수도(제2물류센터)',condition:'약 30,000원, 실비정산',base:30000,renewDate:null,memo:'실비정산'},
+  {id:'u007',type:'util',category:'통신',payDate:'매월 21일',vendor:'SK텔레콤',account:'건물관리비_통신비',content:'본사 EV 비상전화(주출입구)',condition:'월 3,500원',base:3500,renewDate:null,memo:''},
+  {id:'u008',type:'util',category:'통신',payDate:'매월 21일',vendor:'SK텔레콤',account:'건물관리비_통신비',content:'본사 EV 비상전화(부출입구)',condition:'월 3,500원',base:3500,renewDate:null,memo:''},
+  {id:'u009',type:'util',category:'통신',payDate:'매월 22일',vendor:'LG유플러스 웹하드',account:'통신비',content:'LG유플러스 웹하드',condition:'월 163,350원',base:163350,renewDate:null,memo:''},
+  {id:'u010',type:'util',category:'통신',payDate:'매월 25일',vendor:'케이티',account:'건물관리비_통신비',content:'UTM 장비 이용료',condition:'월 348,510원',base:348510,renewDate:null,memo:''},
+  {id:'u011',type:'util',category:'통신',payDate:'매월 25일',vendor:'케이티',account:'건물관리비_통신비',content:'본사 인터넷전화 이용료',condition:'월 약 482,480원',base:482480,renewDate:null,memo:'매달 조금씩 상이'},
+  {id:'u012',type:'util',category:'통신',payDate:'매월 25일',vendor:'케이티',account:'건물관리비_통신비',content:'본사 인터넷 이용료',condition:'월 약 311,760원',base:311760,renewDate:null,memo:'매달 조금씩 상이'},
+  // ── 연1회 갱신 ──────────────────────────────────────────
+  {id:'a001',type:'annual',category:'기타',payDate:'1월',vendor:'KMI',account:'복리후생비',content:'직원 건강검진비용',condition:'연 1회, 1월',base:11000000,renewDate:'2027-01-15',memo:''},
+  {id:'a002',type:'annual',category:'기타',payDate:'1월',vendor:'파주시',account:'',content:'장애인고용부담금',condition:'연 1회, 1월',base:15000000,renewDate:'2027-01-15',memo:''},
+  {id:'a003',type:'annual',category:'기타',payDate:'2월',vendor:'한국출판마케팅연구소',account:'',content:'기획회의 구독료',condition:'연 1회, 2월',base:5500000,renewDate:'2027-02-15',memo:'매년 2월 1년 구독료'},
+  {id:'a004',type:'annual',category:'기타',payDate:'1월',vendor:'파주시',account:'',content:'자동차세',condition:'연 1회, 1월',base:675600,renewDate:'2027-01-15',memo:''},
+  {id:'a005',type:'annual',category:'기타',payDate:'1월',vendor:'파주시',account:'',content:'등록면허세',condition:'연 1회, 1월',base:120000,renewDate:'2027-01-15',memo:''},
+  {id:'a006',type:'annual',category:'기타',payDate:'1월',vendor:'기업은행',account:'',content:'퇴직연금 수수료',condition:'연 1회, 1월',base:2000000,renewDate:'2027-01-15',memo:''},
+  {id:'a007',type:'annual',category:'기타',payDate:'2월',vendor:'임직원',account:'',content:'근속포상금',condition:'연 1회, 2월',base:20000000,renewDate:'2027-02-15',memo:''},
+  {id:'a008',type:'annual',category:'보험',payDate:'2월',vendor:'승강기보험',account:'보험료',content:'승강기보험',condition:'연 1회, 2월',base:100000,renewDate:'2027-02-15',memo:''},
+  {id:'a009',type:'annual',category:'유지보수',payDate:'2월',vendor:'한비로(다산북스)',account:'',content:'그룹웨어 연 갱신비용',condition:'연 1회, 2월',base:7700000,renewDate:'2027-02-15',memo:''},
+  {id:'a010',type:'annual',category:'유지보수',payDate:'2월',vendor:'21세기소프트',account:'',content:'Adobe 라이선스 갱신(1년)',condition:'연 1회, 2월',base:28314000,renewDate:'2027-02-15',memo:''},
+  {id:'a011',type:'annual',category:'기타',payDate:'3월',vendor:'파주출판단지입주기업협의회',account:'',content:'입주기업협의회 연회비',condition:'연 1회, 3월',base:1500000,renewDate:'2027-03-15',memo:''},
+  {id:'a012',type:'annual',category:'기타',payDate:'4월',vendor:'미래에셋',account:'',content:'미래에셋 퇴직연금 수수료',condition:'연 1회, 4월',base:5000000,renewDate:'2027-04-15',memo:''},
+  {id:'a013',type:'annual',category:'보험',payDate:'5월',vendor:'보험사',account:'보험료',content:'K3 법인차량 보험',condition:'연 1회, 5월',base:1000000,renewDate:'2027-05-15',memo:'인사총무 법인카드'},
+  {id:'a014',type:'annual',category:'유지보수',payDate:'5월',vendor:'한비로(임프린트,스튜디오다산)',account:'',content:'스튜디오다산·임프린트 그룹웨어',condition:'연 1회, 5월',base:1000000,renewDate:'2027-05-15',memo:''},
+  {id:'a015',type:'annual',category:'유지보수',payDate:'5월',vendor:'글로싸인',account:'',content:'전자계약/API',condition:'연 1회, 2025.06.01~2026.05.31(자동연장)',base:2530000,renewDate:'2026-07-15',memo:'갱신 임박 확인 필요'},
+  {id:'a016',type:'annual',category:'유지보수',payDate:'5월',vendor:'한비로',account:'',content:'그룹웨어 1년 연장 갱신',condition:'연 1회, 5월',base:6000000,renewDate:'2027-05-15',memo:''},
+  {id:'a017',type:'annual',category:'유지보수',payDate:'6월',vendor:'윤폰트',account:'',content:'윤폰트 서체',condition:'연 1회, 2024.06.24~2025.06.24',base:4235000,renewDate:'2026-07-15',memo:'갱신일 확인 필요'},
+  {id:'a018',type:'annual',category:'기타',payDate:'6월',vendor:'임직원',account:'',content:'여름휴가비',condition:'연 1회, 6월',base:90000000,renewDate:'2027-06-15',memo:'약 90,000,000 / 여름휴가 시작 3일전 지급'},
+  {id:'a019',type:'annual',category:'기타',payDate:'7월',vendor:'우리은행',account:'',content:'우리은행 퇴직연금 수수료',condition:'연 1회, 7월',base:13000000,renewDate:'2026-07-15',memo:''},
+  {id:'a020',type:'annual',category:'기타',payDate:'7월',vendor:'파주시',account:'',content:'사옥 재산세(건축물)',condition:'년1회, 7월',base:9500000,renewDate:'2026-07-15',memo:''},
+  {id:'a021',type:'annual',category:'기타',payDate:'7월',vendor:'파주시',account:'',content:'제1물류 재산세(건축물)',condition:'년1회, 7월',base:2800000,renewDate:'2026-07-15',memo:''},
+  {id:'a022',type:'annual',category:'기타',payDate:'7월',vendor:'파주시',account:'',content:'제2물류 재산세(건축물)',condition:'년1회, 7월',base:0,renewDate:'2026-07-15',memo:'금액 미정'},
+  {id:'a023',type:'annual',category:'보험',payDate:'8월',vendor:'보험사',account:'보험료',content:'포터 법인차량 보험',condition:'연 1회, 8월',base:1000000,renewDate:'2026-08-15',memo:'인사총무 법인카드'},
+  {id:'a024',type:'annual',category:'보험',payDate:'8월',vendor:'보험사',account:'보험료',content:'제2물류센터 화재보험',condition:'연 1회, 8월',base:4000000,renewDate:'2026-08-15',memo:''},
+  {id:'a025',type:'annual',category:'기타',payDate:'8월',vendor:'파주시청',account:'',content:'주민세(사업소분)',condition:'연 1회, 8월',base:2000000,renewDate:'2026-08-15',memo:'위택스 확인 필요(우편 안옴)'},
+  {id:'a026',type:'annual',category:'보험',payDate:'9월',vendor:'보험사',account:'보험료',content:'다산빌딩 화재보험',condition:'연 1회, 9월',base:500000,renewDate:'2026-09-15',memo:''},
+  {id:'a027',type:'annual',category:'유지보수',payDate:'9월',vendor:'산돌폰트',account:'',content:'산돌라이프 서체 갱신',condition:'연 1회, 9월',base:2000000,renewDate:'2026-09-15',memo:''},
+  {id:'a028',type:'annual',category:'기타',payDate:'9월',vendor:'파주시청',account:'',content:'본사·물류센터 토지 재산세',condition:'연 1회, 9월',base:8000000,renewDate:'2026-09-15',memo:''},
+  {id:'a029',type:'annual',category:'기타',payDate:'9월',vendor:'임직원/거래처',account:'',content:'추석선물',condition:'연 1회, 9월',base:45000000,renewDate:'2026-09-15',memo:''},
+  {id:'a030',type:'annual',category:'보험',payDate:'11월',vendor:'보험사',account:'보험료',content:'제1물류센터 화재보험',condition:'연 1회, 11월',base:4000000,renewDate:'2026-11-15',memo:'기간 2023.11.27~2024.11.27'},
+  {id:'a031',type:'annual',category:'보험',payDate:'12월',vendor:'보험사',account:'보험료',content:'카니발 법인차량 보험',condition:'연 1회, 12월',base:1000000,renewDate:'2026-12-15',memo:'인사총무 법인카드'},
+  {id:'a032',type:'annual',category:'기타',payDate:'12월',vendor:'한국출판인회의',account:'',content:'특별기부금',condition:'연 1회, 12월',base:10000000,renewDate:'2026-12-15',memo:'나가기 전 재무팀 연매출 확인'},
+];
+
+// =========================================================
+// 유틸
+// =========================================================
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const PAD = n => String(n).padStart(2,'0');
+const TODAY = new Date();
+const WON = n => n ? Number(n).toLocaleString('ko-KR')+'원' : '-';
+const WONR = n => n ? Number(n).toLocaleString('ko-KR') : '-';
+
+function dday(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return Math.ceil((d - TODAY) / 86400000);
+}
+function ddayBadge(d) {
+  if (d === null) return '';
+  if (d < 0) return `<span class="badge neutral">경과 ${Math.abs(d)}일</span>`;
+  if (d === 0) return `<span class="badge urgent">오늘!</span>`;
+  if (d <= 30) return `<span class="badge urgent">D-${d}</span>`;
+  if (d <= 60) return `<span class="badge warn">D-${d}</span>`;
+  return `<span class="badge ok">D-${d}</span>`;
+}
+function rowClass(d) {
+  if (d === null) return '';
+  if (d <= 30) return 'r-urgent';
+  if (d <= 60) return 'r-warn';
+  return 'r-ok';
+}
+
+// 오늘 날짜
+document.getElementById('todayTxt').textContent =
+  `${TODAY.getFullYear()}.${PAD(TODAY.getMonth()+1)}.${PAD(TODAY.getDate())}`;
+
+// =========================================================
+// 탭 전환
+// =========================================================
+window.go = function(id, el) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('sec-'+id).classList.add('on');
+  el.classList.add('on');
+  if (id==='dash') renderDash();
+  if (id==='contract') renderContract();
+  if (id==='util') renderUtil();
+  if (id==='trend') renderTrend();
+  if (id==='factor') renderFactor();
+};
+
+// =========================================================
+// ① 대시보드
+// =========================================================
+let renewalChartInst = null, utilChartInst = null;
+
+function renderDash() {
+  const allWithDday = CONTRACTS.filter(c=>c.renewDate).map(c=>({...c,d:dday(c.renewDate)}));
+  const urgent = allWithDday.filter(c=>c.d!==null&&c.d<=30&&c.d>=0);
+  const warn = allWithDday.filter(c=>c.d!==null&&c.d>30&&c.d<=60);
+  const monthlyBase = CONTRACTS.filter(c=>c.type==='monthly').reduce((s,c)=>s+c.base,0);
+  const utilBase = CONTRACTS.filter(c=>c.type==='util').reduce((s,c)=>s+c.base,0);
+  const annualBase = CONTRACTS.filter(c=>c.type==='annual').reduce((s,c)=>s+c.amount||s+c.base,0);
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi blue"><div class="kpi-label">월 정기계약 합계</div><div class="kpi-val">${WON(monthlyBase+utilBase)}</div><div class="kpi-hint">연간 추정 ${WON((monthlyBase+utilBase)*12)}</div></div>
+    <div class="kpi blue"><div class="kpi-label">연1회 갱신비 합계</div><div class="kpi-val">${WON(annualBase)}</div><div class="kpi-hint">총 ${CONTRACTS.filter(c=>c.type==='annual').length}건</div></div>
+    <div class="kpi ${urgent.length?'red':'green'}"><div class="kpi-label">30일 이내 갱신</div><div class="kpi-val ${urgent.length?'red':''}">${urgent.length}건</div><div class="kpi-hint">${urgent.slice(0,2).map(c=>c.content.slice(0,8)).join(', ')||'없음'}</div></div>
+    <div class="kpi ${warn.length?'orange':'green'}"><div class="kpi-label">60일 이내 갱신</div><div class="kpi-val ${warn.length?'orange':''}">${warn.length}건</div><div class="kpi-hint">${warn.slice(0,2).map(c=>c.content.slice(0,8)).join(', ')||'없음'}</div></div>
+  `;
+
+  // 임박 갱신 테이블
+  const sorted = allWithDday.filter(c=>c.d!==null&&c.d>=0).sort((a,b)=>a.d-b.d).slice(0,8);
+  document.getElementById('urgentCnt').textContent = `상위 ${sorted.length}건`;
+  document.querySelector('#urgentTbl tbody').innerHTML = sorted.map(c=>`
+    <tr class="${rowClass(c.d)}">
+      <td>${c.content}</td><td>${c.vendor}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${c.renewDate}</td>
+      <td>${ddayBadge(c.d)}</td>
+      <td class="num">${WON(c.base)}</td>
+    </tr>`).join('');
+
+  // 계정별 집계
+  const accMap = {};
+  CONTRACTS.filter(c=>c.type!=='annual').forEach(c=>{
+    const k = c.account||'(미분류)';
+    if(!accMap[k]) accMap[k]={n:0,t:0};
+    accMap[k].n++; accMap[k].t+=c.base;
+  });
+  const maxT = Math.max(...Object.values(accMap).map(v=>v.t),1);
+  document.getElementById('accSummary').innerHTML = Object.entries(accMap).sort((a,b)=>b[1].t-a[1].t).map(([k,v])=>`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div style="width:120px;font-size:11px;color:var(--gray600);flex-shrink:0;">${k}</div>
+      <div style="flex:1;height:6px;background:var(--gray100);border-radius:3px;">
+        <div style="width:${Math.round(v.t/maxT*100)}%;height:6px;background:var(--blue);border-radius:3px;"></div>
+      </div>
+      <div style="width:90px;font-family:var(--mono);font-size:11px;text-align:right;">${WON(v.t)}</div>
+    </div>`).join('');
+
+  // 연갱신비 월별 차트
+  const mAmts = MONTHS.map(m=>CONTRACTS.filter(c=>c.type==='annual'&&c.payDate===m).reduce((s,c)=>s+c.base,0));
+  if (renewalChartInst) renewalChartInst.destroy();
+  renewalChartInst = new Chart(document.getElementById('renewalChart'), {
+    type:'bar',
+    data:{labels:MONTHS,datasets:[{data:mAmts,backgroundColor:'rgba(37,99,235,.7)',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v>=1000000?v/1000000+'M':v+'원',font:{size:10}}},x:{ticks:{font:{size:10}}}}}
+  });
+
+  // 운영비 카테고리 비중 도넛
+  const catMap = {};
+  CONTRACTS.filter(c=>c.type==='util').forEach(c=>{
+    if(!catMap[c.category]) catMap[c.category]=0;
+    catMap[c.category]+=c.base;
+  });
+  if (utilChartInst) utilChartInst.destroy();
+  utilChartInst = new Chart(document.getElementById('utilChart'), {
+    type:'doughnut',
+    data:{labels:Object.keys(catMap),datasets:[{data:Object.values(catMap),backgroundColor:['#2563eb','#0ea5e9','#8b5cf6','#10b981','#f59e0b','#ef4444']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11}}}}}
+  });
+}
+
+// =========================================================
+// ② 계약 현황
+// =========================================================
+let cFilterType = 'all';
+window.cFilter = function(type, el) {
+  cFilterType = type;
+  document.querySelectorAll('#sec-contract .fbar .ftag').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderContract();
+};
+
+// 계정 필터 옵션 초기화
+const accounts = [...new Set(CONTRACTS.map(c=>c.account||'(미분류)'))].sort();
+const cAccSel = document.getElementById('cAccFilter');
+accounts.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;cAccSel.appendChild(o);});
+
+window.renderContract = function() {
+  const q = document.getElementById('cSearch').value.toLowerCase();
+  const acc = document.getElementById('cAccFilter').value;
+  let list = CONTRACTS.filter(c=>{
+    const d = c.renewDate ? dday(c.renewDate) : null;
+    const matchType = cFilterType==='all'||(cFilterType==='urgent'&&d!==null&&d<=30&&d>=0)||(cFilterType==='warn'&&d!==null&&d>30&&d<=60)||(cFilterType==='ok'&&d!==null&&d>60)||(cFilterType==='annual'&&c.type==='annual');
+    const matchQ = !q||c.vendor.toLowerCase().includes(q)||c.content.toLowerCase().includes(q);
+    const matchAcc = !acc||(c.account||'(미분류)')===acc;
+    return matchType&&matchQ&&matchAcc;
+  });
+  const total = list.reduce((s,c)=>s+c.base,0);
+  document.getElementById('contractCntTxt').textContent = `${list.length}건`;
+  document.getElementById('contractTotal').textContent = WON(total);
+  const typeTag = c => c.type==='annual'?`<span class="tag renewal">연1회</span>`:`<span class="tag contract">정기</span>`;
+  document.querySelector('#contractTbl tbody').innerHTML = list.map(c=>{
+    const d = c.renewDate ? dday(c.renewDate) : null;
+    return `<tr class="${rowClass(d)}">
+      <td>${typeTag(c)}</td>
+      <td style="font-weight:600;">${c.vendor}</td>
+      <td style="font-size:11px;color:var(--gray400);">${c.account||''}</td>
+      <td>${c.content}</td>
+      <td style="font-size:11px;color:var(--gray600);max-width:160px;">${c.condition}</td>
+      <td class="num">${WON(c.base)}</td>
+      <td style="font-family:var(--mono);font-size:11px;">${c.renewDate||'-'}</td>
+      <td>${ddayBadge(d)}</td>
+      <td style="font-size:11px;color:var(--gray400);max-width:140px;">${c.memo}</td>
+    </tr>`;
+  }).join('');
+};
+
+// =========================================================
+// ③ 운영비 현황
+// =========================================================
+let uFilterCat = 'all';
+window.uFilter = function(cat, el) {
+  uFilterCat = cat;
+  document.querySelectorAll('#sec-util .fbar .ftag').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  renderUtil();
+};
+
+const UTIL_CAT_ICON = {전기:'⚡',수도:'💧',통신:'📡',보안:'🔒',렌탈:'🚗',유지보수:'🔧',복리후생:'☕',기타:'📦'};
+
+function renderUtil() {
+  // 카테고리 카드
+  const catMap = {};
+  CONTRACTS.filter(c=>c.type!=='annual').forEach(c=>{
+    if(!catMap[c.category]) catMap[c.category]={n:0,t:0};
+    catMap[c.category].n++; catMap[c.category].t+=c.base;
+  });
+  const maxT = Math.max(...Object.values(catMap).map(v=>v.t),1);
+  document.getElementById('utilCardGrid').innerHTML = Object.entries(catMap).sort((a,b)=>b[1].t-a[1].t).map(([k,v])=>`
+    <div class="util-card">
+      <div class="util-card-icon">${UTIL_CAT_ICON[k]||'📦'}</div>
+      <div class="util-card-name">${k}</div>
+      <div class="util-card-amt">${WON(v.t)}</div>
+      <div class="util-card-cnt">${v.n}건 / 연간 ${WON(v.t*12)}</div>
+      <div class="util-bar"><div class="util-bar-fill" style="width:${Math.round(v.t/maxT*100)}%"></div></div>
+    </div>`).join('');
+
+  // 테이블
+  let list = CONTRACTS.filter(c=>c.type!=='annual');
+  if(uFilterCat!=='all') list = list.filter(c=>c.category.includes(uFilterCat));
+  const total = list.reduce((s,c)=>s+c.base,0);
+  document.getElementById('utilCnt').textContent = `${list.length}건`;
+  document.getElementById('utilTblTitle').textContent = uFilterCat==='all'?'운영비 항목 전체':`${uFilterCat} 관련 항목`;
+  document.getElementById('utilTotal').textContent = WON(total);
+  document.querySelector('#utilTbl tbody').innerHTML = list.map(c=>`
+    <tr>
+      <td><span class="tag util">${UTIL_CAT_ICON[c.category]||''} ${c.category}</span></td>
+      <td style="font-weight:600;">${c.vendor}</td>
+      <td>${c.content}</td>
+      <td style="font-size:11px;color:var(--gray400);">${c.payDate}</td>
+      <td class="num">${WON(c.base)}</td>
+      <td style="text-align:center;">${c.condition.includes('자동이체')||c.payDate.includes('자동')?'<span class="badge blue">자동이체</span>':''}</td>
+      <td style="font-size:11px;color:var(--gray400);">${c.memo}</td>
+    </tr>`).join('');
+}
+
+// =========================================================
+// ④ 추이 분석
+// =========================================================
+let trendMonth = TODAY.getMonth()+1;
+let trendChartInst = null;
+let trendData = {}; // key: "2026-1-c001" => {amount, memo}
+
+async function loadTrendData(year) {
+  if(!fireOk) return;
+  try {
+    const snap = await getDoc(doc(db,'trend_data',String(year)));
+    if(snap.exists()) trendData = {...trendData,...snap.data()};
+  } catch(e){}
+}
+
+async function saveTrendRow(year, month, id, amount, memo) {
+  const key = `m${month}_${id}`;
+  const val = {amount:Number(amount)||0, memo:memo||''};
+  trendData[`${year}-${key}`] = val;
+  if(!fireOk){showToast('저장됨 (로컬)');return;}
+  try{
+    const ref = doc(db,'trend_data',String(year));
+    const snap = await getDoc(ref);
+    const data = snap.exists()?snap.data():{};
+    data[key] = val;
+    await setDoc(ref,data);
+    showToast('저장되었습니다 ✓');
+  } catch(e){ showToast('Firebase 설정 필요'); }
+}
+
+function getTrend(year, month, id) {
+  return trendData[`${year}-m${month}_${id}`] || null;
+}
+function getMonthTotal(year, month) {
+  return CONTRACTS.filter(c=>c.type!=='annual').reduce((s,c)=>{
+    const t = getTrend(year,month,c.id);
+    return s + (t ? t.amount : c.base);
+  },0);
+}
+
+// 월 탭 생성
+const trendTabsEl = document.getElementById('trendMonthTabs');
+MONTHS.forEach((m,i)=>{
+  const btn = document.createElement('div');
+  btn.className = 'mtab'+(i+1===trendMonth?' on':'');
+  btn.textContent = m;
+  btn.onclick = ()=>{
+    trendMonth = i+1;
+    document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    renderTrendInput();
+  };
+  trendTabsEl.appendChild(btn);
+});
+
+// 연도 선택
+const factorMonthSel = document.getElementById('factorMonth');
+MONTHS.forEach((m,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=m;if(i+1===TODAY.getMonth()+1)o.selected=true;factorMonthSel.appendChild(o);});
+
+async function renderTrend() {
+  const year = parseInt(document.getElementById('trendYear').value);
+  await loadTrendData(year);
+  // 차트
+  const monthTotals = MONTHS.map((_,i)=>getMonthTotal(year,i+1));
+  const baseTotal = CONTRACTS.filter(c=>c.type!=='annual').reduce((s,c)=>s+c.base,0);
+  document.getElementById('trendSub').textContent = `기준금액 ${WON(baseTotal)}/월`;
+  if(trendChartInst) trendChartInst.destroy();
+  trendChartInst = new Chart(document.getElementById('trendChart'),{
+    type:'line',
+    data:{labels:MONTHS,datasets:[
+      {label:'실제 지출',data:monthTotals,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:.3,borderWidth:2,pointRadius:4},
+      {label:'기준금액',data:Array(12).fill(baseTotal),borderColor:'#94a3b8',borderDash:[6,3],borderWidth:1.5,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{ticks:{callback:v=>v>=1000000?v/1000000+'M원':v+'원',font:{size:10}}},x:{ticks:{font:{size:10}}}}}
+  });
+  renderTrendInput();
+}
+
+async function renderTrendInput() {
+  const year = parseInt(document.getElementById('trendYear').value);
+  const m = trendMonth;
+  document.getElementById('trendInputTitle').textContent = `${year}년 ${m}월 항목별 실제금액 입력`;
+  const list = CONTRACTS.filter(c=>c.type!=='annual');
+  let baseSum=0, actSum=0;
+  document.querySelector('#trendInputTbl tbody').innerHTML = list.map(c=>{
+    const t = getTrend(year,m,c.id);
+    baseSum+=c.base;
+    if(t) actSum+=t.amount;
+    return `<tr>
+      <td style="font-weight:500;">${c.vendor}</td>
+      <td>${c.content}</td>
+      <td class="num">${WON(c.base)}</td>
+      <td style="background:#fffbea;">
+        <input class="inp-amt" type="number" id="amt-${c.id}" value="${t?t.amount:''}" placeholder="${WONR(c.base)}" onchange="updateTrendTotal(${year},${m})">
+      </td>
+      <td style="background:#fffbea;">
+        <input class="inp-memo" type="text" id="memo-${c.id}" value="${t?t.memo:''}" placeholder="증감 사유 메모...">
+      </td>
+      <td><button class="btn-save" id="sbtn-${c.id}" onclick="saveTrendRowUI(${year},${m},'${c.id}')">저장</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('trendBaseTotal').textContent = WON(baseSum);
+  document.getElementById('trendActualTotal').textContent = actSum>0?WON(actSum):'-';
+}
+
+window.updateTrendTotal = function(year, m) {
+  let sum = 0;
+  CONTRACTS.filter(c=>c.type!=='annual').forEach(c=>{
+    const v = parseFloat(document.getElementById(`amt-${c.id}`)?.value||0);
+    if(v) sum+=v;
+  });
+  document.getElementById('trendActualTotal').textContent = sum>0?WON(sum):'-';
+};
+
+window.saveTrendRowUI = async function(year, month, id) {
+  const amount = parseFloat(document.getElementById(`amt-${id}`)?.value||0);
+  const memo = document.getElementById(`memo-${id}`)?.value||'';
+  const btn = document.getElementById(`sbtn-${id}`);
+  btn.textContent='저장중...';
+  await saveTrendRow(year,month,id,amount,memo);
+  trendData[`${year}-m${month}_${id}`] = {amount, memo};
+  btn.textContent='저장됨 ✓'; btn.classList.add('done');
+  setTimeout(()=>{btn.textContent='저장';btn.classList.remove('done');},2000);
+  // 차트 업데이트
+  if(trendChartInst){
+    const monthTotals = MONTHS.map((_,i)=>getMonthTotal(year,i+1));
+    trendChartInst.data.datasets[0].data = monthTotals;
+    trendChartInst.update();
+  }
+};
+
+// =========================================================
+// ⑤ 증감 요인 분석
+// =========================================================
+function renderFactor() {
+  const year = parseInt(document.getElementById('factorYear').value);
+  const month = parseInt(document.getElementById('factorMonth').value);
+  const prevMonth = month===1?12:month-1;
+  const prevYear = month===1?year-1:year;
+
+  const list = CONTRACTS.filter(c=>c.type!=='annual').map(c=>{
+    const cur = getTrend(year,month,c.id);
+    const prv = getTrend(prevYear,prevMonth,c.id);
+    const curAmt = cur?cur.amount:c.base;
+    const prvAmt = prv?prv.amount:c.base;
+    const diff = curAmt - prvAmt;
+    const pct = prvAmt>0?(diff/prvAmt*100):0;
+    return {...c, curAmt, prvAmt, diff, pct, memo: cur?cur.memo:''};
+  });
+
+  const curTotal = list.reduce((s,c)=>s+c.curAmt,0);
+  const prvTotal = list.reduce((s,c)=>s+c.prvAmt,0);
+  const totalDiff = curTotal - prvTotal;
+  const totalPct = prvTotal>0?(totalDiff/prvTotal*100):0;
+  const upItems = list.filter(c=>c.diff>0).sort((a,b)=>b.diff-a.diff);
+  const dnItems = list.filter(c=>c.diff<0).sort((a,b)=>a.diff-b.diff);
+
+  document.getElementById('factorKpi').innerHTML = `
+    <div class="kpi blue"><div class="kpi-label">당월 합계</div><div class="kpi-val">${WON(curTotal)}</div><div class="kpi-hint">${year}년 ${month}월</div></div>
+    <div class="kpi blue"><div class="kpi-label">전월 합계</div><div class="kpi-val">${WON(prvTotal)}</div><div class="kpi-hint">${prevYear}년 ${prevMonth}월</div></div>
+    <div class="kpi ${totalDiff>0?'red':'green'}"><div class="kpi-label">전월대비 증감액</div><div class="kpi-val ${totalDiff>0?'red':'green'}">${totalDiff>=0?'+':''}${WON(totalDiff)}</div></div>
+    <div class="kpi ${totalDiff>0?'orange':'green'}"><div class="kpi-label">전월대비 증감률</div><div class="kpi-val ${totalDiff>0?'orange':'green'}">${totalPct>=0?'+':''}${totalPct.toFixed(1)}%</div></div>
+  `;
+
+  const alertHTML = (items, dir) => items.slice(0,5).map(c=>`
+    <div class="alert-item ${dir==='up'?'urgent':'ok'}">
+      <div class="alert-icon">${dir==='up'?'🔺':'🔻'}</div>
+      <div class="alert-body">
+        <div class="alert-title">${c.content} <span style="font-weight:400;color:var(--gray600);">(${c.vendor})</span></div>
+        <div class="alert-desc">${c.memo||'메모 없음'}</div>
+      </div>
+      <div class="alert-amt ${dir==='up'?'up':'dn'}">${dir==='up'?'+':''}${WON(c.diff)}<br><span style="font-size:10px;">(${c.pct>=0?'+':''}${c.pct.toFixed(1)}%)</span></div>
+    </div>`).join('')||`<div style="padding:20px;text-align:center;color:var(--gray400);font-size:13px;">해당 항목 없음</div>`;
+
+  document.getElementById('factorUp').innerHTML = alertHTML(upItems,'up');
+  document.getElementById('factorDn').innerHTML = alertHTML(dnItems,'dn');
+
+  const sorted = list.filter(c=>c.diff!==0).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+  document.querySelector('#factorTbl tbody').innerHTML = sorted.map(c=>`
+    <tr>
+      <td style="font-weight:500;">${c.vendor}</td>
+      <td>${c.content}</td>
+      <td class="num">${WON(c.prvAmt)}</td>
+      <td class="num">${WON(c.curAmt)}</td>
+      <td class="num ${c.diff>0?'up':'dn'}">${c.diff>=0?'+':''}${WON(c.diff)}</td>
+      <td class="num ${c.diff>0?'up':'dn'}" style="text-align:center;">${c.pct>=0?'+':''}${c.pct.toFixed(1)}%</td>
+      <td style="font-size:11px;color:var(--gray600);">${c.memo}</td>
+    </tr>`).join('');
+}
+
+// =========================================================
+// 토스트
+// =========================================================
+window.showToast = function(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2500);
+};
+
+// =========================================================
+// 초기 렌더
+// =========================================================
+renderDash();
+</script>
+</body>
+</html>
