@@ -150,6 +150,35 @@ tr.r-ok{background:var(--green-bg)!important;}
 /* 반응형 */
 @media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr;}}
 @media(max-width:600px){.main{padding:12px 10px;}.kpi-row{grid-template-columns:1fr 1fr;}.kpi-val{font-size:16px;}.hdr-logo{font-size:14px;}}
+
+/* 편집 모달 */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-bg.on{display:flex;}
+.modal{background:#fff;border-radius:16px;padding:28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+.modal-title{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--gray400);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-label{font-size:11px;font-weight:600;color:var(--gray600);letter-spacing:.3px;text-transform:uppercase;margin-bottom:5px;display:block;}
+.form-input{width:100%;padding:8px 12px;border:1px solid var(--gray200);border-radius:8px;font-size:13px;font-family:'Noto Sans KR',sans-serif;}
+.form-input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+.form-input[type=number]{font-family:var(--mono);}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.btn-cancel{padding:8px 18px;border:1px solid var(--gray200);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;color:var(--gray600);}
+.btn-primary{padding:8px 20px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:13px;cursor:pointer;font-weight:600;}
+.btn-primary:hover{background:var(--blue-light);}
+.btn-renew{padding:8px 18px;border:none;border-radius:8px;background:var(--green);color:#fff;font-size:13px;cursor:pointer;font-weight:600;}
+.btn-edit{padding:3px 10px;border:1px solid var(--gray200);border-radius:6px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray600);white-space:nowrap;}
+.btn-edit:hover{background:var(--gray50);border-color:var(--blue);color:var(--blue);}
+
+/* 갱신 이력 */
+.history-list{margin-top:16px;border-top:1px solid var(--gray100);padding-top:14px;}
+.history-title{font-size:11px;font-weight:600;color:var(--gray400);letter-spacing:.3px;text-transform:uppercase;margin-bottom:10px;}
+.history-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray100);}
+.history-item:last-child{border-bottom:none;}
+.history-year{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--navy);width:40px;}
+.history-amt{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--gray900);}
+.history-diff{font-size:11px;font-family:var(--mono);}
+.history-memo{font-size:11px;color:var(--gray400);margin-left:auto;}
 </style>
 </head>
 <body>
@@ -218,7 +247,7 @@ tr.r-ok{background:var(--green-bg)!important;}
     <div class="tbl-wrap"><table id="contractTbl">
       <thead><tr>
         <th>구분</th><th>거래처</th><th>계정</th><th>내용</th><th>계약조건</th>
-        <th>기준금액/월</th><th>갱신예정일</th><th>D-Day</th><th>비고</th>
+        <th>기준금액/월</th><th>갱신예정일</th><th>D-Day</th><th>비고</th><th></th>
       </tr></thead>
       <tbody></tbody>
       <tfoot><tr><td colspan="5">합 계</td><td class="num" id="contractTotal"></td><td colspan="3"></td></tr></tfoot>
@@ -315,6 +344,26 @@ tr.r-ok{background:var(--green-bg)!important;}
 
 </div><!-- /main -->
 <div class="toast" id="toast"></div>
+
+<!-- 편집 모달 -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">계약 정보 수정</div>
+    <div class="modal-sub" id="modalSub"></div>
+    <div class="form-row"><label class="form-label">기준금액 (원)</label><input class="form-input" type="number" id="modalAmt" placeholder="금액 입력"></div>
+    <div class="form-row"><label class="form-label">계약만료일 / 갱신예정일</label><input class="form-input" type="date" id="modalDate"></div>
+    <div class="form-row"><label class="form-label">계약조건 메모</label><input class="form-input" type="text" id="modalCondition" placeholder="계약조건, 자동연장 여부 등"></div>
+    <div class="form-row"><label class="form-label">비고</label><input class="form-input" type="text" id="modalMemo" placeholder="담당자, 주의사항 등"></div>
+    <div id="renewSection" style="background:var(--green-bg);border-radius:10px;padding:14px;margin-top:4px;border:1px solid #bbf7d0;">
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:10px;">🔄 갱신 처리 (이전 금액을 이력으로 보관)</div>
+      <div class="form-row" style="margin-bottom:10px;"><label class="form-label">갱신 연도</label><input class="form-input" type="number" id="renewYear" placeholder="예: 2026" style="width:120px;"></div>
+      <div class="form-row" style="margin-bottom:10px;"><label class="form-label">새 갱신금액 (원)</label><input class="form-input" type="number" id="renewAmt" placeholder="갱신 후 새 금액"></div>
+      <div class="form-row" style="margin-bottom:0;"><label class="form-label">갱신 메모 (인상사유 등)</label><input class="form-input" type="text" id="renewMemo" placeholder="예: 물가인상 반영, 계약 재협상 등"></div>
+    </div>
+    <div class="history-list" id="historyList" style="display:none;"><div class="history-title">📋 갱신 이력</div><div id="historyItems"></div></div>
+    <div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-renew" onclick="processRenew()">🔄 갱신 처리</button><button class="btn-primary" onclick="saveModal()">💾 저장</button></div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -579,28 +628,40 @@ window.renderContract = function() {
   const q = document.getElementById('cSearch').value.toLowerCase();
   const acc = document.getElementById('cAccFilter').value;
   let list = CONTRACTS.filter(c=>{
-    const d = c.renewDate ? dday(c.renewDate) : null;
+    const ov = contractOverrides[c.id] || {};
+    const renewDate = ov.renewDate || c.renewDate;
+    const d = renewDate ? dday(renewDate) : null;
     const matchType = cFilterType==='all'||(cFilterType==='urgent'&&d!==null&&d<=30&&d>=0)||(cFilterType==='warn'&&d!==null&&d>30&&d<=60)||(cFilterType==='ok'&&d!==null&&d>60)||(cFilterType==='annual'&&c.type==='annual');
     const matchQ = !q||c.vendor.toLowerCase().includes(q)||c.content.toLowerCase().includes(q);
     const matchAcc = !acc||(c.account||'(미분류)')===acc;
     return matchType&&matchQ&&matchAcc;
   });
-  const total = list.reduce((s,c)=>s+c.base,0);
+  const total = list.reduce((s,c)=>{
+    const ov = contractOverrides[c.id]||{};
+    return s+(ov.base||c.base);
+  },0);
   document.getElementById('contractCntTxt').textContent = `${list.length}건`;
   document.getElementById('contractTotal').textContent = WON(total);
   const typeTag = c => c.type==='annual'?`<span class="tag renewal">연1회</span>`:`<span class="tag contract">정기</span>`;
   document.querySelector('#contractTbl tbody').innerHTML = list.map(c=>{
-    const d = c.renewDate ? dday(c.renewDate) : null;
+    const ov = contractOverrides[c.id]||{};
+    const renewDate = ov.renewDate || c.renewDate;
+    const base = ov.base || c.base;
+    const condition = ov.condition || c.condition;
+    const memo = ov.memo || c.memo;
+    const d = renewDate ? dday(renewDate) : null;
+    const hasHistory = contractHistory[c.id]&&contractHistory[c.id].length>0;
     return `<tr class="${rowClass(d)}">
       <td>${typeTag(c)}</td>
       <td style="font-weight:600;">${c.vendor}</td>
       <td style="font-size:11px;color:var(--gray400);">${c.account||''}</td>
       <td>${c.content}</td>
-      <td style="font-size:11px;color:var(--gray600);max-width:160px;">${c.condition}</td>
-      <td class="num">${WON(c.base)}</td>
-      <td style="font-family:var(--mono);font-size:11px;">${c.renewDate||'-'}</td>
+      <td style="font-size:11px;color:var(--gray600);max-width:140px;">${condition}</td>
+      <td class="num" style="cursor:pointer;" onclick="openModal('${c.id}')">${WON(base)} ${ov.base?'<span style="color:var(--blue);font-size:10px;">수정됨</span>':''}</td>
+      <td style="font-family:var(--mono);font-size:11px;cursor:pointer;" onclick="openModal('${c.id}')">${renewDate||'<span style="color:var(--orange);">미입력</span>'}</td>
       <td>${ddayBadge(d)}</td>
-      <td style="font-size:11px;color:var(--gray400);max-width:140px;">${c.memo}</td>
+      <td style="font-size:11px;color:var(--gray400);max-width:120px;">${memo}</td>
+      <td><button class="btn-edit" onclick="openModal('${c.id}')">✏️ 수정${hasHistory?` (이력 ${contractHistory[c.id].length})`:''}</button></td>
     </tr>`;
   }).join('');
 };
@@ -852,6 +913,132 @@ window.showToast = function(msg) {
   t.textContent = msg; t.classList.add('on');
   setTimeout(()=>t.classList.remove('on'),2500);
 };
+
+// =========================================================
+// 계약 수정/갱신 모달
+// =========================================================
+let contractOverrides = {}; // id => {base, renewDate, condition, memo}
+let contractHistory = {};   // id => [{year, amount, memo, date}]
+let currentEditId = null;
+
+async function loadContractData() {
+  if(!fireOk) return;
+  try {
+    const snap1 = await getDoc(doc(db,'contract_overrides','data'));
+    if(snap1.exists()) contractOverrides = snap1.data();
+    const snap2 = await getDoc(doc(db,'contract_history','data'));
+    if(snap2.exists()) contractHistory = snap2.data();
+  } catch(e){ console.log('계약 데이터 로드 실패',e); }
+}
+
+window.openModal = async function(id) {
+  currentEditId = id;
+  await loadContractData();
+  const c = CONTRACTS.find(x=>x.id===id);
+  const ov = contractOverrides[id]||{};
+  const hist = contractHistory[id]||[];
+
+  document.getElementById('modalTitle').textContent = `✏️ ${c.vendor}`;
+  document.getElementById('modalSub').textContent = c.content;
+  document.getElementById('modalAmt').value = ov.base||c.base||'';
+  document.getElementById('modalDate').value = ov.renewDate||c.renewDate||'';
+  document.getElementById('modalCondition').value = ov.condition||c.condition||'';
+  document.getElementById('modalMemo').value = ov.memo||c.memo||'';
+  document.getElementById('renewYear').value = new Date().getFullYear();
+  document.getElementById('renewAmt').value = '';
+  document.getElementById('renewMemo').value = '';
+
+  // 갱신 이력 표시
+  const histEl = document.getElementById('historyList');
+  const histItems = document.getElementById('historyItems');
+  if(hist.length > 0) {
+    histEl.style.display = 'block';
+    const sorted = [...hist].sort((a,b)=>b.year-a.year);
+    histItems.innerHTML = sorted.map((h,i)=>{
+      const prev = sorted[i+1];
+      const diff = prev ? h.amount - prev.amount : 0;
+      const pct = prev && prev.amount > 0 ? ((diff/prev.amount)*100).toFixed(1) : null;
+      return `<div class="history-item">
+        <span class="history-year">${h.year}</span>
+        <span class="history-amt">${WON(h.amount)}</span>
+        ${pct!==null?`<span class="history-diff ${diff>0?'up':'dn'}">${diff>0?'▲':'▼'} ${Math.abs(diff).toLocaleString()}원 (${diff>0?'+':''}${pct}%)</span>`:'<span class="history-diff neu">기준</span>'}
+        <span class="history-memo">${h.memo||''}</span>
+      </div>`;
+    }).join('');
+  } else {
+    histEl.style.display = 'none';
+  }
+
+  document.getElementById('editModal').classList.add('on');
+};
+
+window.closeModal = function() {
+  document.getElementById('editModal').classList.remove('on');
+  currentEditId = null;
+};
+
+window.saveModal = async function() {
+  if(!currentEditId) return;
+  const amt = parseFloat(document.getElementById('modalAmt').value)||0;
+  const date = document.getElementById('modalDate').value;
+  const condition = document.getElementById('modalCondition').value;
+  const memo = document.getElementById('modalMemo').value;
+
+  contractOverrides[currentEditId] = { base:amt, renewDate:date, condition, memo };
+
+  if(fireOk) {
+    try {
+      await setDoc(doc(db,'contract_overrides','data'), contractOverrides);
+      showToast('저장되었습니다 ✓');
+    } catch(e){ showToast('저장 실패 - 오프라인으로 저장됨'); }
+  } else {
+    showToast('저장됨 (로컬)');
+  }
+  closeModal();
+  renderContract();
+  renderDash();
+};
+
+window.processRenew = async function() {
+  if(!currentEditId) return;
+  const year = parseInt(document.getElementById('renewYear').value);
+  const amt = parseFloat(document.getElementById('renewAmt').value);
+  const memo = document.getElementById('renewMemo').value;
+  if(!year||!amt){ showToast('갱신 연도와 금액을 입력해주세요'); return; }
+
+  // 이력에 추가
+  if(!contractHistory[currentEditId]) contractHistory[currentEditId]=[];
+  // 기존 같은 연도 있으면 덮어쓰기
+  const idx = contractHistory[currentEditId].findIndex(h=>h.year===year);
+  if(idx>=0) contractHistory[currentEditId][idx] = {year,amount:amt,memo,date:new Date().toISOString().slice(0,10)};
+  else contractHistory[currentEditId].push({year,amount:amt,memo,date:new Date().toISOString().slice(0,10)});
+
+  // 기준금액도 최신 갱신금액으로 업데이트
+  const ov = contractOverrides[currentEditId]||{};
+  contractOverrides[currentEditId] = {...ov, base:amt};
+  document.getElementById('modalAmt').value = amt;
+
+  if(fireOk) {
+    try {
+      await setDoc(doc(db,'contract_history','data'), contractHistory);
+      await setDoc(doc(db,'contract_overrides','data'), contractOverrides);
+      showToast(`${year}년 갱신 이력이 저장되었습니다 ✓`);
+    } catch(e){ showToast('저장 실패'); }
+  } else {
+    showToast(`${year}년 갱신 처리됨 (로컬)`);
+  }
+
+  // 이력 UI 갱신
+  await openModal(currentEditId);
+};
+
+// 모달 배경 클릭 시 닫기
+document.getElementById('editModal').addEventListener('click', function(e){
+  if(e.target===this) closeModal();
+});
+
+// 계약 데이터 초기 로드
+loadContractData();
 
 // =========================================================
 // 초기 렌더
